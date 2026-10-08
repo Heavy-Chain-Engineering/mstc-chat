@@ -125,7 +125,8 @@ def ignore_patterns(name: str) -> set[str]:
 
 
 def dockerfile() -> str:
-    return (ROOT / "Dockerfile").read_text()
+    """The Dockerfile with each continued line joined, so an instruction reads as one line."""
+    return (ROOT / "Dockerfile").read_text().replace("\\\n", " ")
 
 
 def dockerfile_instructions(keyword: str) -> list[str]:
