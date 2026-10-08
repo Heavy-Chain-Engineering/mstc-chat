@@ -53,7 +53,8 @@ def test_should_read_session_when_token_is_just_under_four_hours_old(
 
 def test_should_read_none_when_token_was_altered() -> None:
     token = session.issue(session.new_session("Avery"), SECRET)
-    altered = token[:-1] + ("A" if token[-1] != "A" else "B")
+    # The last base64 character can carry only padding bits, so alter one near the start.
+    altered = token[0] + ("A" if token[1] != "A" else "B") + token[2:]
 
     assert session.read(altered, SECRET) is None
 

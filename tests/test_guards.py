@@ -37,7 +37,8 @@ def _expired_token(monkeypatch: pytest.MonkeyPatch) -> str:
 
 def _altered_token() -> str:
     token = session.issue(session.new_session("Avery"), SESSION_SECRET)
-    return token[:-2] + ("AA" if not token.endswith("AA") else "BB")
+    # The last base64 character can carry only padding bits, so alter one near the start.
+    return token[0] + ("A" if token[1] != "A" else "B") + token[2:]
 
 
 def _other_key_token() -> str:
