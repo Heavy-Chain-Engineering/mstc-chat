@@ -1,0 +1,9 @@
+[checks]
+# Each command runs from the project's root with `sh -c`, in order. Exit 0 passes.
+commands = [
+  "uv run pytest --cov -q",
+  "uv run mypy backend",
+  "uv run ruff check backend tests",
+  "npm --prefix frontend run -s typecheck",
+  "npm --prefix frontend run -s lint",
+]

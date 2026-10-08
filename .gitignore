@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Environment files (keep the example)
+.env
+.env.*
+!.env.example
+
+# Editor and system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/.cc-writes/
+
+# ETC work records (only the check commands are shared)
+.etc_sdlc/*
+!.etc_sdlc/settings.toml

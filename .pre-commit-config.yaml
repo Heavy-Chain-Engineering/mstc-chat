@@ -1,0 +1,77 @@
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  # File hygiene, conflict markers, private keys and large files.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(uv\.lock|frontend/package-lock\.json)$
+      - id: end-of-file-fixer
+        exclude: ^(uv\.lock|frontend/package-lock\.json)$
+      - id: check-merge-conflict
+        args: [--assume-in-merge]
+      - id: detect-private-key
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+
+  # Secret scanning.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  # Python formatting and linting, including Ruff's security rules (S).
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(backend|tests)/
+      - id: ruff-format
+        files: ^(backend|tests)/
+
+  # Commit messages follow conventional commits.
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  # Type checkers, TypeScript lint and format, and tests use the project's own installs.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy backend
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.py$
+      - id: tsc
+        name: tsc
+        entry: npm --prefix frontend run -s typecheck
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+      - id: eslint
+        name: eslint
+        entry: npm --prefix frontend run -s lint
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+      - id: prettier
+        name: prettier
+        entry: npm --prefix frontend run -s format:check
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/
+      - id: pytest
+        name: pytest with coverage
+        entry: uv run pytest --cov -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
