@@ -15,7 +15,7 @@ RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 
-FROM ghcr.io/astral-sh/uv:0.12.4 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.24 AS uv
 
 FROM python:3.14.8-slim AS deps
 COPY --from=uv /uv /bin/uv
