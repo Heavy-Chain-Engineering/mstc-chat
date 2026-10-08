@@ -14,6 +14,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal
+from urllib.parse import urlsplit
 
 from starlette.applications import Starlette
 from starlette.datastructures import Headers, MutableHeaders
@@ -27,6 +28,7 @@ from starlette.types import Message as AsgiMessage
 
 from backend import session
 from backend.room import (
+    EVENTS_WAITING_LIMIT,
     MAX_STREAMS,
     MAX_STREAMS_PER_NAME,
     PRESENCE_GRACE_SECONDS,
@@ -60,13 +62,15 @@ SECURITY_HEADERS: Final = {
 
 REJECTION_STATUS: Final = {"bad_request": 400, "too_many_streams": 429}
 
+# __main__.py names the app by this alias, so only this module imports Starlette (ADR-02).
+type ChatApp = Starlette
+
 type ApiErrorCode = Literal[
     "bad_request",
     "signed_out",
     "wrong_password",
     "cross_site",
     "busy",
-    "empty_message",
     "too_large",
 ]
 
@@ -94,15 +98,15 @@ class SecurityHeaders:
 
 
 class BodyLimit:
-    """Answers 413 to a body over the limit, by its Content-Length or by the bytes that arrive.
-
-    Starlette's own max_body_size answers in plain text; this keeps the JSON error body.
-    """
+    """Answers 413 to a body over the limit, by its Content-Length or by the bytes that arrive."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
         length = Headers(scope=scope).get("content-length", "0")
         if not length.isdigit() or int(length) > BODY_LIMIT_BYTES:
             await _error_response(ApiError(413, "too_large"))(scope, receive, send)
@@ -179,7 +183,7 @@ class ChatApi:
         text = check_text(_json_fields(body, ("text",))["text"])
         html = to_safe_html(text)
         if not html.strip():
-            raise ApiError(422, "empty_message")
+            raise RejectedInput("message_blank")
         self.room.post(author.name, author.sid, html)
         return Response(status_code=204)
 
@@ -255,7 +259,19 @@ def _event(name: str, payload: object, event_id: str | None = None) -> str:
 
 
 def _refuse_cross_site(request: Request) -> None:
-    if request.headers.get("sec-fetch-site") == "cross-site":
+    """Refuses a POST another site's page sent; a request with neither header passes (BR-002).
+
+    Only a browser can carry a participant's cookie, and browsers send one of the two headers.
+    """
+    fetch_site = request.headers.get("sec-fetch-site")
+    origin = request.headers.get("origin")
+    if fetch_site is not None:
+        is_cross_site = fetch_site != "same-origin"
+    else:
+        is_cross_site = origin is not None and urlsplit(origin).netloc != request.headers.get(
+            "host"
+        )
+    if is_cross_site:
         raise ApiError(403, "cross_site")
 
 
@@ -334,11 +350,13 @@ def create_app(
     max_waiting_logins: int = MAX_WAITING_LOGINS,
     max_streams: int = MAX_STREAMS,
     max_streams_per_name: int = MAX_STREAMS_PER_NAME,
-) -> Starlette:
+    queue_size: int = EVENTS_WAITING_LIMIT,
+) -> ChatApp:
     room = Room(
         presence_grace=presence_grace,
         max_streams=max_streams,
         max_streams_per_name=max_streams_per_name,
+        queue_size=queue_size,
     )
     api = ChatApi(
         room=room,

@@ -114,11 +114,13 @@ class Room:
         presence_grace: float = PRESENCE_GRACE_SECONDS,
         max_streams: int = MAX_STREAMS,
         max_streams_per_name: int = MAX_STREAMS_PER_NAME,
+        queue_size: int = EVENTS_WAITING_LIMIT,
     ) -> None:
         self.instance = secrets.token_hex(8)
         self._presence_grace = presence_grace
         self._max_streams = max_streams
         self._max_streams_per_name = max_streams_per_name
+        self._queue_size = queue_size
         self._history: deque[Message] = deque(maxlen=HISTORY_LIMIT)
         self._next_seq = 1
         self._connections: set[Connection] = set()
@@ -138,7 +140,13 @@ class Room:
         if len(self._connections) >= self._max_streams or same_name >= self._max_streams_per_name:
             raise RejectedInput("too_many_streams")
         before = self._names_key()
-        connection = Connection(tab, name, sid, self._replay_after(last_event_id))
+        connection = Connection(
+            tab,
+            name,
+            sid,
+            self._replay_after(last_event_id),
+            asyncio.Queue(maxsize=self._queue_size),
+        )
         self._connections.add(connection)
         present = self._tabs.setdefault(tab, _PresentTab(name))
         present.name = name

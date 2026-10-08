@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import NamedTuple, Protocol
 
 import uvicorn
-from starlette.applications import Starlette
 
-from backend.app import create_app
+from backend.app import ChatApp, create_app
 
 DEFAULT_PORT = 8080
 MIN_SESSION_SECRET_LENGTH = 32
@@ -30,7 +29,7 @@ class Settings(NamedTuple):
 class ServerRunner(Protocol):
     def __call__(
         self,
-        app: Starlette,
+        app: ChatApp,
         *,
         host: str,
         port: int,
