@@ -617,7 +617,19 @@ describe("new messages button (AC-1 to AC-4)", () => {
     expect(hiddenNearBottom).toBe(true);
     expect(button.hidden).toBe(false);
     expect(button.getAttribute("aria-label")).toBe(
-      "1 new messages, jump to latest",
+      "1 new message, jump to latest",
+    );
+  });
+
+  it('should say "1 new message" in the text and the aria-label when one message from another participant arrives while scrolled up', () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+
+    view.render(room({ messages: [message(1), message(2)] }));
+
+    expect(button.textContent).toBe("1 new message ↓");
+    expect(button.getAttribute("aria-label")).toBe(
+      "1 new message, jump to latest",
     );
   });
 
