@@ -5,11 +5,15 @@ PATH. The fake records each call's arguments and anything piped to it, so the te
 what each target would send to Google Cloud, without an account or a network.
 """
 
+import importlib.util
 import os
 import re
 import shutil
 import stat
 import subprocess
+import sys
+import types
+from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -149,6 +153,10 @@ def test_dockerignore_excludes_env_files() -> None:
     assert {".env", ".env.*"} <= ignore_patterns(".dockerignore")
 
 
+def test_dockerignore_excludes_env_files_in_every_folder() -> None:
+    assert {"**/.env", "**/.env.*"} <= ignore_patterns(".dockerignore")
+
+
 def test_dockerignore_excludes_git_history() -> None:
     assert ".git" in ignore_patterns(".dockerignore")
 
@@ -229,7 +237,7 @@ def test_deploy_pins_both_secrets_to_looked_up_version_numbers(repo: Path) -> No
         "--cpu=1",
         "--memory=512Mi",
         "--no-cpu-boost",
-        "--allow-unauthenticated",
+        "--no-invoker-iam-check",
     ],
 )
 def test_deploy_sets_cloud_run_setting(repo: Path, flag: str) -> None:
@@ -243,6 +251,15 @@ def test_deploy_passes_no_secret_as_a_plain_environment_variable(repo: Path) -> 
 
     assert "env-vars" not in call
     assert "latest" not in call
+
+
+def test_deploy_makes_the_service_public_without_an_all_users_binding(repo: Path) -> None:
+    # The organization's domain-restricted sharing policy refuses the allUsers binding that
+    # --allow-unauthenticated adds; turning the invoker check off needs no binding.
+    call = deploy_call(run_make(repo, "deploy"))
+
+    assert "--no-invoker-iam-check" in call.split()
+    assert "--allow-unauthenticated" not in call
 
 
 def test_deploy_prints_address_commit_and_uncommitted_changes(repo: Path) -> None:
@@ -382,3 +399,46 @@ def test_ci_installs_npm_packages_without_install_scripts() -> None:
     installs = re.findall(r"npm .*\bci\b.*$", workflow(), flags=re.MULTILINE)
     assert installs
     assert [line for line in installs if "--ignore-scripts" not in line] == []
+
+
+# --- The rehearsal tool sends the class password only over HTTPS, or to this machine ---
+
+
+@pytest.fixture
+def parse_rehearsal_args(monkeypatch: pytest.MonkeyPatch) -> types.FunctionType:
+    """The rehearsal tool's argument parser. httpx is stubbed: parsing never uses it."""
+    monkeypatch.setitem(sys.modules, "httpx", types.ModuleType("httpx"))
+    path = ROOT / "tests" / "rehearsal" / "rehearse.py"
+    spec = importlib.util.spec_from_file_location("rehearse_under_test", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.parse_args
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://mstc-chat-test-uc.a.run.app",
+        "http://192.168.1.20:8080",
+        "ftp://localhost",
+        "localhost",
+    ],
+)
+def test_rehearsal_refuses_an_address_that_would_send_the_password_in_clear(
+    parse_rehearsal_args: types.FunctionType, url: str
+) -> None:
+    with pytest.raises(SystemExit) as refused:
+        parse_rehearsal_args(["--url", url])
+
+    assert refused.value.code == 2
+
+
+@pytest.mark.parametrize("url", [SERVICE_URL, "http://localhost:8080", "http://127.0.0.1:8080"])
+def test_rehearsal_accepts_https_and_this_machine(
+    parse_rehearsal_args: types.FunctionType, url: str
+) -> None:
+    args: Namespace = parse_rehearsal_args(["--url", url])
+
+    assert args.url == url
