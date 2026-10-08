@@ -113,7 +113,7 @@ def test_should_accept_fifteen_digit_sequence_when_last_event_id_names_this_inst
 
 
 def test_should_trim_surrounding_whitespace_when_name_is_clean() -> None:
-    assert clean_name("  Avery Sample \t") == "Avery Sample"
+    assert clean_name("  Avery Sample \u3000") == "Avery Sample"
 
 
 def test_should_accept_fifty_characters_when_name_is_at_the_limit() -> None:

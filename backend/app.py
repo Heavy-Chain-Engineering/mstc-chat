@@ -58,6 +58,8 @@ SECURITY_HEADERS: Final = {
     "Referrer-Policy": "no-referrer",
 }
 
+REJECTION_STATUS: Final = {"bad_request": 400, "too_many_streams": 429}
+
 type ApiErrorCode = Literal[
     "bad_request",
     "signed_out",
@@ -294,8 +296,7 @@ def _digest(password: str) -> bytes:
 def _error_response(error: ApiError | RejectedInput) -> Response:
     if isinstance(error, ApiError):
         return JSONResponse({"error": error.code}, status_code=error.status)
-    status = 429 if error.code == "too_many_streams" else 422
-    return JSONResponse({"error": error.code}, status_code=status)
+    return JSONResponse({"error": error.code}, status_code=REJECTION_STATUS.get(error.code, 422))
 
 
 def _handle_error(request: Request, error: Exception) -> Response:

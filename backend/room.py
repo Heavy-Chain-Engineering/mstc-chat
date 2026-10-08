@@ -6,6 +6,7 @@ All state lives on the one asyncio event loop (ADR-01), so no method here needs 
 import asyncio
 import re
 import secrets
+import unicodedata
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -23,6 +24,7 @@ PRESENCE_GRACE_SECONDS = 5.0
 LAST_EVENT_ID = re.compile(r"([0-9a-f]{16}):([0-9]{1,15})")
 
 type RejectionCode = Literal[
+    "bad_request",
     "name_blank",
     "name_too_long",
     "message_blank",
@@ -77,8 +79,17 @@ class _PresentTab:
     expiry: asyncio.TimerHandle | None = None
 
 
+REFUSED_NAME_CATEGORIES = frozenset({"Cc", "Cf"})
+
+
 def clean_name(raw: str) -> str:
-    """Return the display name without surrounding whitespace, or raise RejectedInput."""
+    """Return the display name without surrounding whitespace, or raise RejectedInput.
+
+    A control or format character, such as a newline or a right-to-left override, is refused
+    before trimming; the login form cannot produce one, so it counts as a bad request.
+    """
+    if any(unicodedata.category(character) in REFUSED_NAME_CATEGORIES for character in raw):
+        raise RejectedInput("bad_request")
     name = raw.strip()
     if not name:
         raise RejectedInput("name_blank")
