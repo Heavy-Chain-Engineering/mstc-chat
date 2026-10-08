@@ -116,7 +116,7 @@ deploy never inherits a stale one:
 | Request timeout | 60 s | The server ends each stream after 20 s anyway. |
 | CPU, memory | 1 vCPU, 512 MiB | Enough for one class; the smallest that fits. |
 | Start-up CPU boost | off | Keeps the cost near zero. |
-| Access | unauthenticated | Students reach the login page without a Google account. |
+| Access | public, invoker IAM check off (`--no-invoker-iam-check`) | Students reach the login page without a Google account. The heavychain.org organization policy (domain-restricted sharing) refuses the `allUsers` binding that `--allow-unauthenticated` would add; turning the check off needs no binding. |
 | Runtime account | `mstc-chat-run` | Reads the two secrets and nothing else. |
 | Build account | `mstc-chat-build` | Holds only Cloud Run Builder. |
 | Secrets | `CLASS_PASSWORD=class-password:<n>`, `SESSION_SECRET=session-secret:<n>` | References pinned to the newest enabled version numbers, looked up at deploy time; the settings show names and numbers, never values. |

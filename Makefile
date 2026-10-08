@@ -118,7 +118,7 @@ deploy:
 		exit 1; }; \
 	gcloud run deploy $(SERVICE) $(RUN_FLAGS) --source=. --quiet \
 		--max=1 --concurrency=250 --timeout=60 --cpu=1 --memory=512Mi --no-cpu-boost \
-		--allow-unauthenticated \
+		--no-invoker-iam-check \
 		--service-account=$(RUNTIME_ACCOUNT) \
 		--build-service-account=projects/$(PROJECT)/serviceAccounts/$(BUILD_ACCOUNT) \
 		--set-secrets=CLASS_PASSWORD=class-password:$$password_version,SESSION_SECRET=session-secret:$$session_version; \
