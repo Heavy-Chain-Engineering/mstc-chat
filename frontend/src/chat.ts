@@ -125,8 +125,10 @@ function renderMessage(
 }
 
 // Updates the list in place, so screen readers announce only new messages
-// (role="log") and focus inside a kept message is not lost.
-function syncMessages(list: HTMLElement, state: RoomState): void {
+// (role="log") and focus inside a kept message is not lost. Returns the
+// messages the list did not show before; a reconnect that replays known
+// messages returns none.
+function syncMessages(list: HTMLElement, state: RoomState): ChatMessage[] {
   const keyOf = (m: ChatMessage): string => `${state.instance ?? ""}:${m.seq}`;
   const wanted = new Set(state.messages.map(keyOf));
   const existing = new Map<string, HTMLElement>();
@@ -138,15 +140,65 @@ function syncMessages(list: HTMLElement, state: RoomState): void {
       article.remove();
     }
   });
+  const added: ChatMessage[] = [];
   state.messages.forEach((message, index) => {
     const key = keyOf(message);
-    const article =
-      existing.get(key) ?? renderMessage(list.ownerDocument, key, message);
+    let article = existing.get(key);
+    if (article === undefined) {
+      article = renderMessage(list.ownerDocument, key, message);
+      added.push(message);
+    }
     const at = list.children[index] ?? null;
     if (at !== article) {
       list.insertBefore(article, at);
     }
   });
+  return added;
+}
+
+function isNearBottom(list: HTMLElement): boolean {
+  return (
+    list.scrollHeight - list.scrollTop - list.clientHeight <= STICK_TO_BOTTOM_PX
+  );
+}
+
+interface Follower {
+  follow(added: readonly ChatMessage[], wasNearBottom: boolean): void;
+}
+
+// Keeps the reader at the latest message, or, while they read history,
+// counts others' new messages on the "New messages" button.
+function setupFollower(doc: Document, list: HTMLElement): Follower {
+  const button = byId<HTMLButtonElement>(doc, "jump-latest");
+  let unseen = 0;
+
+  const showUnseen = (count: number): void => {
+    unseen = count;
+    button.hidden = count === 0;
+    button.textContent = `${count} new messages ↓`;
+    button.setAttribute("aria-label", `${count} new messages, jump to latest`);
+  };
+  const jumpToLatest = (): void => {
+    list.scrollTop = list.scrollHeight;
+    showUnseen(0);
+  };
+
+  button.addEventListener("click", jumpToLatest);
+  list.addEventListener("scroll", () => {
+    if (isNearBottom(list)) {
+      showUnseen(0);
+    }
+  });
+
+  return {
+    follow(added, wasNearBottom) {
+      if (wasNearBottom || added.some((message) => message.own)) {
+        jumpToLatest();
+      } else {
+        showUnseen(unseen + added.length);
+      }
+    },
+  };
 }
 
 function orderNames(names: readonly string[], viewer: string): string[] {
@@ -319,18 +371,15 @@ function setupComposer(doc: Document, deps: ChatDeps): Composer {
   };
 }
 
-export function setupChat(doc: Document, deps: ChatDeps): ChatView {
-  const screen = byId(doc, "chat-screen");
-  const list = byId(doc, "messages");
-  const loading = byId(doc, "messages-loading");
-  const empty = byId(doc, "messages-empty");
+// Returns the function that shows the restarted notice once per restart,
+// so a later render does not replace the alert the reader is reading.
+function setupRestartedNotice(
+  doc: Document,
+  deps: ChatDeps,
+): (restarted: boolean) => void {
   const notices = byId(doc, "notice-area");
-  const reconnecting = byId(doc, "reconnecting");
-  const composer = setupComposer(doc, deps);
-  let viewer = "";
   let restartedShown = false;
-
-  const renderRestarted = (restarted: boolean): void => {
+  return (restarted) => {
     if (restarted && !restartedShown) {
       showAlert(notices, "info", TEXT.restarted, () =>
         deps.onDismissRestarted(),
@@ -341,6 +390,18 @@ export function setupChat(doc: Document, deps: ChatDeps): ChatView {
     notices.hidden = !restarted;
     restartedShown = restarted;
   };
+}
+
+export function setupChat(doc: Document, deps: ChatDeps): ChatView {
+  const screen = byId(doc, "chat-screen");
+  const list = byId(doc, "messages");
+  const loading = byId(doc, "messages-loading");
+  const empty = byId(doc, "messages-empty");
+  const reconnecting = byId(doc, "reconnecting");
+  const composer = setupComposer(doc, deps);
+  const follower = setupFollower(doc, list);
+  const renderRestarted = setupRestartedNotice(doc, deps);
+  let viewer = "";
 
   return {
     show(viewerName, draft = "") {
@@ -357,17 +418,13 @@ export function setupChat(doc: Document, deps: ChatDeps): ChatView {
       screen.hidden = true;
     },
     render(state) {
-      const atBottom =
-        list.scrollHeight - list.scrollTop - list.clientHeight <=
-        STICK_TO_BOTTOM_PX;
-      syncMessages(list, state);
+      const wasNearBottom = isNearBottom(list);
+      const added = syncMessages(list, state);
       loading.hidden = state.instance !== null;
       empty.hidden = state.instance === null || state.messages.length > 0;
       renderRestarted(state.restarted);
       renderOnline(doc, state.names, viewer);
-      if (atBottom) {
-        list.scrollTop = list.scrollHeight;
-      }
+      follower.follow(added, wasNearBottom);
     },
     setReconnecting(visible) {
       reconnecting.hidden = !visible;

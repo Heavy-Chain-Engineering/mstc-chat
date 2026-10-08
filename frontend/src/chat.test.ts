@@ -521,6 +521,136 @@ describe("online list (AC-9)", () => {
   });
 });
 
+describe("new messages button (AC-1 to AC-4)", () => {
+  // jsdom has no layout, so each test gives the list a 400 px window and
+  // sets how tall its content is.
+  const WINDOW_PX = 400;
+  const CONTENT_PX = 1000;
+  const SCROLLED_UP_TOP = 200;
+  const list = () => byId("messages");
+  const jumpButton = () => byId<HTMLButtonElement>("jump-latest");
+  const distanceFromBottom = () =>
+    list().scrollHeight - list().scrollTop - list().clientHeight;
+
+  function setContentHeight(px: number): void {
+    Object.defineProperty(list(), "scrollHeight", {
+      configurable: true,
+      value: px,
+    });
+    Object.defineProperty(list(), "clientHeight", {
+      configurable: true,
+      value: WINDOW_PX,
+    });
+  }
+
+  function scrollTo(top: number): void {
+    list().scrollTop = top;
+    list().dispatchEvent(new Event("scroll"));
+  }
+
+  // The first message fits the window, so the reader starts at the bottom;
+  // then the content grows and the reader scrolls 400 px above the bottom.
+  function startScrolledUp() {
+    const started = start();
+    setContentHeight(WINDOW_PX);
+    started.view.render(room({ messages: [message(1)] }));
+    setContentHeight(CONTENT_PX);
+    scrollTo(SCROLLED_UP_TOP);
+    return started;
+  }
+
+  it("should keep the reader's place and show the count of others' new messages when the reader has scrolled up", () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+
+    view.render(room({ messages: [message(1), message(2), message(3)] }));
+    view.render(
+      room({ messages: [message(1), message(2), message(3), message(4)] }),
+    );
+
+    expect(list().scrollTop).toBe(SCROLLED_UP_TOP);
+    expect(button.hidden).toBe(false);
+    expect(button.textContent).toBe("3 new messages ↓");
+    expect(button.getAttribute("aria-label")).toBe(
+      "3 new messages, jump to latest",
+    );
+  });
+
+  it("should keep the count when the room renders again with no new messages after a reconnect", () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+    const twoNew = room({ messages: [message(1), message(2), message(3)] });
+
+    view.render(twoNew);
+    view.render(twoNew);
+
+    expect(button.getAttribute("aria-label")).toBe(
+      "2 new messages, jump to latest",
+    );
+  });
+
+  it("should scroll to the bottom and hide the button when the reader clicks it", () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+    view.render(room({ messages: [message(1), message(2)] }));
+    const shownBeforeClick = !button.hidden;
+
+    button.click();
+
+    expect(shownBeforeClick).toBe(true);
+    expect(distanceFromBottom()).toBeLessThanOrEqual(0);
+    expect(button.hidden).toBe(true);
+  });
+
+  it("should hide the button and start counting again from 1 when the reader scrolls back to within 80 px of the bottom", () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+    view.render(room({ messages: [message(1), message(2), message(3)] }));
+
+    scrollTo(CONTENT_PX - WINDOW_PX - 80);
+    const hiddenNearBottom = button.hidden;
+    scrollTo(SCROLLED_UP_TOP);
+    view.render(
+      room({ messages: [message(1), message(2), message(3), message(4)] }),
+    );
+
+    expect(hiddenNearBottom).toBe(true);
+    expect(button.hidden).toBe(false);
+    expect(button.getAttribute("aria-label")).toBe(
+      "1 new messages, jump to latest",
+    );
+  });
+
+  it("should scroll to the bottom and hide the button when the participant's own message arrives while scrolled up", () => {
+    const button = jumpButton();
+    const { view } = startScrolledUp();
+    view.render(room({ messages: [message(1), message(2)] }));
+    const shownBeforeOwn = !button.hidden;
+
+    view.render(
+      room({
+        messages: [message(1), message(2), message(3, { own: true })],
+      }),
+    );
+
+    expect(shownBeforeOwn).toBe(true);
+    expect(distanceFromBottom()).toBeLessThanOrEqual(0);
+    expect(button.hidden).toBe(true);
+  });
+
+  it("should follow new messages and show no button when the reader is at the bottom", () => {
+    const button = jumpButton();
+    const { view } = start();
+    setContentHeight(CONTENT_PX);
+    scrollTo(CONTENT_PX - WINDOW_PX);
+
+    view.render(room({ messages: [message(1), message(2)] }));
+
+    expect(distanceFromBottom()).toBeLessThanOrEqual(0);
+    expect(button.hidden).toBe(true);
+  });
+});
+
 describe("arrival", () => {
   it("should show the viewer's name and focus the message box when the chat shows", () => {
     start();

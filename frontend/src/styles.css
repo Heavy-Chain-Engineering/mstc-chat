@@ -379,6 +379,18 @@ summary:focus-visible,
   gap: 0.75rem;
   scroll-behavior: smooth;
 }
+/* The "New messages" button floats at the bottom centre of the list, so it
+   never covers the composer, which sits outside .msg-area. */
+.jump-latest {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.jump-latest[hidden] {
+  display: none;
+}
 .msg-placeholder {
   position: absolute;
   inset: 0;
