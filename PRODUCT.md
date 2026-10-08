@@ -48,9 +48,12 @@ calm, professional, and recognisably UT, without imitating an official logo.
 - Naming: on first mention, "Master of Science in Technology Commercialization", "McCombs School
   of Business" and "The University of Texas at Austin"; afterwards "MSTC", "Texas McCombs" and
   "UT" ([UT-E], [MC-N]).
-- Logo: none for now. The login page shows the text "MSTC Chat" in Charis SIL. Official logos
-  need permission from UT's Office of Brand, Trademarks and Licensing before they appear on this
-  site ([MC-CB]); `DESIGN.md` reserves a slot for one.
+- Logo: the person holds permission to use the McCombs mark for this class tool through their
+  service on the MSTC Advisory Council (the VP's ruling of 2026-10-08), so the login page's logo
+  slot takes the official McCombs logo from
+  https://utexas.box.com/s/b88qfe69z1mhr4d441yj28k1gwo7c402 ([MC-D]). Until that file is
+  committed, the login page shows the text "MSTC Chat" in Charis SIL. `DESIGN.md`, "Logo", sets
+  the rules.
 
 ## Voice
 
