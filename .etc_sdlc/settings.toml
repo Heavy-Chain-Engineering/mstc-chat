@@ -6,4 +6,5 @@ commands = [
   "uv run ruff check backend tests",
   "npm --prefix frontend run -s typecheck",
   "npm --prefix frontend run -s lint",
+  "npm --prefix frontend run -s test",
 ]

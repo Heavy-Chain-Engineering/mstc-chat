@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" data-theme="mstc">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Join — MSTC Chat</title>
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <!-- Login page (component-specs.md, LoginPage). -->
+    <div id="login-screen" class="login-page" hidden>
+      <div class="band" aria-hidden="true"></div>
+      <main class="login-wrap">
+        <section class="login-card" aria-labelledby="login-title">
+          <div id="logo-slot" class="logo-slot"></div>
+          <h1 id="login-title" class="font-display login-title">MSTC Chat</h1>
+          <p class="login-subtitle">
+            Master of Science in Technology Commercialization<br />McCombs
+            School of Business · The University of Texas at Austin
+          </p>
+          <form id="login-form" class="login-form" novalidate>
+            <div id="login-alert"></div>
+            <div>
+              <label class="field-label" for="login-name">Display name</label>
+              <input
+                id="login-name"
+                class="input mstc-field"
+                type="text"
+                name="name"
+                autocomplete="nickname"
+                maxlength="50"
+                required
+                aria-describedby="login-name-hint"
+              />
+              <p id="login-name-hint" class="field-hint">
+                Everyone in the room sees this name.
+              </p>
+              <p id="login-name-error" class="field-error" hidden></p>
+            </div>
+            <div>
+              <label class="field-label" for="login-password"
+                >Class password</label
+              >
+              <input
+                id="login-password"
+                class="input mstc-field"
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <button
+              id="login-join"
+              type="submit"
+              class="btn btn-primary btn-block"
+            >
+              <span
+                class="loading loading-spinner loading-sm"
+                aria-hidden="true"
+                hidden
+              ></span>
+              <span data-label>Join</span>
+            </button>
+          </form>
+          <p class="login-footnote">
+            The room keeps names and messages in memory only. They are gone when
+            the server restarts.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <!-- Chat screen (component-specs.md, ChatScreen). -->
+    <div id="chat-screen" class="chat-screen" hidden>
+      <a class="skip-link" href="#message-box">Skip to message box</a>
+      <div class="band" aria-hidden="true"></div>
+      <header class="chat-head">
+        <h1 class="font-display chat-title">MSTC Chat</h1>
+        <p class="signed-in">
+          Signed in as <strong><bdi id="viewer-name"></bdi></strong>
+        </p>
+      </header>
+      <details class="online-toggle">
+        <summary>Online · <span data-online-count>…</span></summary>
+        <ul class="online-names" data-online-names></ul>
+      </details>
+      <div
+        id="reconnecting"
+        class="notice-reconnect"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <span class="loading loading-dots loading-sm" aria-hidden="true"></span>
+        <span
+          >Reconnecting to the room… Messages sent meanwhile will appear when
+          the connection returns.</span
+        >
+      </div>
+      <div id="notice-area" class="notice-area" hidden></div>
+      <div class="chat-body">
+        <main class="chat-main">
+          <h2 class="sr-only">Messages</h2>
+          <div class="msg-area">
+            <div
+              id="messages"
+              class="msg-list"
+              role="log"
+              aria-label="Messages"
+              tabindex="0"
+            ></div>
+            <button
+              id="jump-latest"
+              type="button"
+              class="btn btn-sm btn-neutral jump-latest"
+              hidden
+            ></button>
+            <div id="messages-loading" class="msg-placeholder" role="status">
+              <span
+                class="loading loading-dots loading-sm"
+                aria-hidden="true"
+              ></span>
+              <span>Loading messages…</span>
+            </div>
+            <div id="messages-empty" class="msg-placeholder" hidden>
+              <p class="empty-title">No messages yet.</p>
+              <p class="empty-hint">
+                Say hello, or share a link for the class.
+              </p>
+            </div>
+          </div>
+          <form id="message-form" class="composer" novalidate>
+            <div id="send-alert"></div>
+            <div class="composer-row">
+              <label class="sr-only" for="message-box">Message</label>
+              <textarea
+                id="message-box"
+                class="textarea mstc-box"
+                rows="2"
+                placeholder="Write a message"
+                aria-describedby="message-hint message-counter"
+              ></textarea>
+              <button id="send" type="submit" class="btn btn-primary">
+                <span
+                  class="loading loading-spinner loading-sm"
+                  aria-hidden="true"
+                  hidden
+                ></span>
+                <span data-label>Send</span>
+              </button>
+            </div>
+            <p id="message-error" class="field-error" hidden></p>
+            <div class="composer-meta">
+              <span id="message-hint"
+                ><span class="hint-long"
+                  >Enter sends. Shift+Enter adds a line. Markdown and ``` code
+                  blocks work.</span
+                ><span class="hint-short"
+                  >Enter sends · Shift+Enter: new line</span
+                ></span
+              >
+              <span id="message-counter" class="counter" hidden></span>
+            </div>
+          </form>
+        </main>
+        <aside class="online-col" aria-labelledby="online-heading">
+          <h2 id="online-heading" class="online-heading">
+            Online <span>· <span data-online-count>…</span></span
+            ><span class="sr-only"> people</span>
+          </h2>
+          <ul class="online-names" data-online-names></ul>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Alerts (component-specs.md, "Alerts and error states"). -->
+    <template id="alert-error">
+      <div class="alert alert-error mstc-alert" role="alert">
+        <svg
+          class="alert-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+          />
+        </svg>
+        <span class="alert-text" data-text></span>
+        <button
+          type="button"
+          class="alert-dismiss"
+          aria-label="Dismiss"
+          data-dismiss
+          hidden
+        >
+          &times;
+        </button>
+      </div>
+    </template>
+    <template id="alert-info">
+      <div class="alert alert-info mstc-alert" role="status">
+        <svg
+          class="alert-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+          />
+        </svg>
+        <span class="alert-text" data-text></span>
+        <button
+          type="button"
+          class="alert-dismiss"
+          aria-label="Dismiss"
+          data-dismiss
+          hidden
+        >
+          &times;
+        </button>
+      </div>
+    </template>
+  </body>
+</html>

@@ -46,7 +46,13 @@ The check commands that prove the project green live in
 
 ## Decision records to read first
 
-None yet. The first ones will come from the chat feature's architecture node.
+- `docs/decisions/ADR-01-starlette-uvicorn-server.md`
+- `docs/decisions/ADR-02-framework-free-room-core.md`
+- `docs/decisions/ADR-03-signed-session-cookie.md`
+- `docs/decisions/ADR-04-cycled-event-stream.md`
+- `docs/decisions/ADR-05-server-side-safe-markdown.md`
+- `docs/decisions/ADR-06-vite-tailwind-client.md`
+- `docs/decisions/ADR-07-cloud-run-make-deploy.md`
 
 ## Standing decisions
 

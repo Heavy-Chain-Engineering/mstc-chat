@@ -33,7 +33,7 @@ to nothing.
 ## What MSTC Chat Does
 
 A student opens the URL the lecturer shares and sees a login page. The student
-enters a display name, an email address and a pre-shared class password. The
+enters a display name and a pre-shared class password. The
 lecturer sets that password through configuration, not in code. When the
 password is right, the server gives the browser a signed session cookie and
 shows the chat screen.
@@ -59,10 +59,10 @@ Actors:
 
 - **No formal compliance regime applies.** The app has no SOC 2, PCI or HIPAA
   scope and no uptime SLA.
-- **Students' names and email addresses are personal data.** Privacy rules for
+- **Students' display names are personal data.** Privacy rules for
   student data (for example GDPR or FERPA, depending on the institution) favour
-  collecting little and keeping it briefly. The app therefore keeps names and
-  emails only in memory, never writes them to disk or a database, and never
+  collecting little and keeping it briefly. The app therefore asks for no
+  email, and keeps names only in memory, never writes them to disk or a database, and never
   logs them or message text.
 - **The class password is a shared secret.** It lives in an environment
   variable or Cloud Run secret and never in the repository.
@@ -76,12 +76,12 @@ Actors:
 
 ## Product Core
 
-- **Participant**: a person signed in with a display name and email. It is not
+- **Participant**: a person signed in with a display name. It is not
   an account. It exists only while the server runs.
 - **Class password**: the one pre-shared password every participant enters. It
   is not per-user, and it is not HTTP Basic auth's browser popup.
 - **Session**: the signed cookie that proves a browser passed the login. It
-  carries the participant's name and email.
+  carries the participant's display name.
 - **Message**: one chat entry with its author's display name, its text and the
   time the server received it. Its text is untrusted input.
 - **Chat room**: the single shared stream of messages. There is exactly one
@@ -91,7 +91,7 @@ Actors:
 
 | Term | Means | Does not mean |
 |---|---|---|
-| Login | The name, email and class-password form | A user account or OAuth sign-in |
+| Login | The display-name and class-password form | A user account or OAuth sign-in |
 | Broadcast | The server sending a message to every open connection | Email or push notification |
 
 ---
@@ -103,7 +103,7 @@ Actors:
 - It keeps no permanent history. It has no database, no export and no archive.
 - It has no user accounts, no registration, no password reset and no roles,
   other than an optional lecturer view if a spec adds one.
-- It does not send email or verify email addresses.
+- It does not ask for, send or verify email addresses.
 - It does not support file uploads, images, reactions or threads.
 - It is not built to scale past one server instance or one classroom.
 
@@ -140,7 +140,7 @@ Merely expensive failures:
 4. Because the class password and cookie-signing key are secrets, the system
    must read them from the environment, and the repository must never hold
    them.
-5. Because names and emails are personal data, the system must keep them only
+5. Because display names are personal data, the system must keep them only
    in memory and must never log them or message text.
 6. Because the app is a teaching example, the code must stay small and
    readable, with no database and no infrastructure beyond one container.

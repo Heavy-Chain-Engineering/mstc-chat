@@ -12,3 +12,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # The Dockerfile's base images (node, python, uv), pinned to exact versions.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
