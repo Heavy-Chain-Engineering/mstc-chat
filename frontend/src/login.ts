@@ -14,6 +14,7 @@ const TEXT = {
   busy: "The chat is busy right now. Wait a few seconds and press Join again.",
   serverError:
     "The chat server had a problem. Wait a few seconds and press Join again.",
+  rejected: "The chat did not accept that request. Press Join to try again.",
   sessionEnded: "Your session has ended. Join again to keep chatting.",
 } as const;
 
@@ -136,6 +137,8 @@ export function setupLogin(doc: Document, deps: LoginDeps): LoginView {
       showNameError(TEXT.nameTooLong);
     } else if (failure.status === 413) {
       showAlert(alert, "error", TEXT.tooLarge);
+    } else if (failure.status === 400) {
+      showAlert(alert, "error", TEXT.rejected);
     } else if (failure.status === 429) {
       showAlert(alert, "error", TEXT.busy);
     } else {

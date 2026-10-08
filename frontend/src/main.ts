@@ -6,7 +6,7 @@ import "./styles.css";
 import { leave, login, sendMessage, session } from "./api";
 import { setupChat } from "./chat";
 import { setupLogin } from "./login";
-import { RoomStream, readReloadMemory } from "./stream";
+import { RoomStream, readReloadMemory, waitForSession } from "./stream";
 
 // A file dropped anywhere on the page must not open in the tab (AC-12).
 window.addEventListener("dragover", (event) => event.preventDefault());
@@ -71,13 +71,30 @@ window.addEventListener("pageshow", (event) =>
   stream?.handlePageShow(event.persisted),
 );
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Only a 401 sends the page to login. While the server cannot answer, the
+// chat screen shows with the restored draft and the reconnecting notice.
 async function start(): Promise<void> {
-  const answer = await session();
-  if (answer.kind === "ok") {
-    enterChat(answer.data.name, saved.draft);
-  } else {
+  let retried = false;
+  const signedIn = await waitForSession({
+    checkSession: session,
+    sleep,
+    onRetrying: () => {
+      retried = true;
+      chat.show("", saved.draft);
+      chat.setReconnecting(true);
+    },
+  });
+  if (signedIn === null) {
+    chat.hide();
     loginView.show({ sessionEnded: saved.draft !== "" });
+    return;
   }
+  chat.setReconnecting(false);
+  enterChat(signedIn.name, retried ? "" : saved.draft);
 }
 
 void start();

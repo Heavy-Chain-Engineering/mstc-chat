@@ -11,9 +11,19 @@ const TEXT = {
   unreachable:
     "Message not sent: the chat server could not be reached. Your text is kept; press Send to try again.",
   busy: "Message not sent: the chat is busy. Your text is kept; press Send to try again.",
+  blank:
+    "Message not sent: there is nothing to send. Type a message, then press Send.",
+  rejected:
+    "Message not sent: the chat did not accept the request. Your text is kept; press Send to try again.",
   restarted: "The chat restarted, so earlier messages are gone.",
   newTab: " (opens in a new tab)",
 } as const;
+
+// Refusals that are not about load get their own words, never "busy".
+const SEND_REFUSAL_TEXT: Readonly<Record<string, string>> = {
+  message_blank: TEXT.blank,
+  bad_request: TEXT.rejected,
+};
 
 export const MESSAGE_LIMIT = 4000;
 const COUNTER_FROM = 3500;
@@ -260,7 +270,8 @@ function setupComposer(doc: Document, deps: ChatDeps): Composer {
     } else if (failure.code === "message_too_long") {
       showLength(parts, true);
     } else {
-      showAlert(alert, "error", TEXT.busy, dismiss);
+      const text = SEND_REFUSAL_TEXT[failure.code] ?? TEXT.busy;
+      showAlert(alert, "error", text, dismiss);
     }
   };
 

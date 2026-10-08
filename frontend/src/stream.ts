@@ -68,6 +68,53 @@ function stringList(value: unknown): string[] {
     : [];
 }
 
+// A record this page did not write, or a damaged one, must not stop the
+// page from starting, so it is treated as absent.
+function parseRecord(raw: string): Record<string, unknown> | null {
+  try {
+    const value: unknown = JSON.parse(raw);
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  } catch (error: unknown) {
+    if (error instanceof SyntaxError) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function retryDelay(attempt: number): number {
+  return RETRY_DELAYS_MS[attempt] ?? RETRY_STEADY_MS;
+}
+
+export interface SessionWaitDeps {
+  checkSession(): Promise<ApiResult<NameAnswer>>;
+  sleep(ms: number): Promise<void>;
+  onRetrying(): void;
+}
+
+// Start-up: only a 401 means signed out (returns null). Any other failure
+// shows the reconnecting state once and asks again after 2 s, 4 s, then
+// every 10 s, as a refused stream does.
+export async function waitForSession(
+  deps: SessionWaitDeps,
+): Promise<NameAnswer | null> {
+  for (let attempt = 0; ; attempt += 1) {
+    const answer = await deps.checkSession();
+    if (answer.kind === "ok") {
+      return answer.data;
+    }
+    if (answer.kind === "error" && answer.status === 401) {
+      return null;
+    }
+    if (attempt === 0) {
+      deps.onRetrying();
+    }
+    await deps.sleep(retryDelay(attempt));
+  }
+}
+
 // Reads what the page saved before its own reload. The draft and the
 // restarted flag are handed back once and then removed, so no message
 // text stays in the browser.
@@ -79,7 +126,11 @@ export function readReloadMemory(storage: KeyValueStore): {
   if (raw === null) {
     return { memory: NO_MEMORY, draft: "" };
   }
-  const saved = JSON.parse(raw) as Record<string, unknown>;
+  const saved = parseRecord(raw);
+  if (saved === null) {
+    storage.removeItem(RELOAD_KEY);
+    return { memory: NO_MEMORY, draft: "" };
+  }
   const memory: InstanceMemory = {
     left: stringList(saved.left),
     reloadedFor:
@@ -222,7 +273,7 @@ export class RoomStream {
       this.options.handlers.onSignedOut();
       return;
     }
-    const delay = RETRY_DELAYS_MS[this.retries] ?? RETRY_STEADY_MS;
+    const delay = retryDelay(this.retries);
     this.retries += 1;
     this.retryTimer = setTimeout(() => this.open(), delay);
   }
