@@ -7,7 +7,7 @@
 # a secret: Cloud Run passes CLASS_PASSWORD and SESSION_SECRET to the running container.
 # Base images are pinned to exact versions; Dependabot's docker entry proposes updates.
 
-FROM node:22.23.3-slim AS client
+FROM node:26.9.0-slim AS client
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 # Install scripts stay off, so a compromised dependency cannot run code during the build.
