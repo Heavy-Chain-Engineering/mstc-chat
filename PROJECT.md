@@ -20,6 +20,9 @@ then show the spec and re-run a deploy live in class.
 - `frontend/`: the TypeScript and daisyUI browser client.
 - `tests/`: the Python tests.
 - `DOMAIN.md`, `PROJECT.md`: the project's context.
+- `.github/`: CI (`ci.yml`) and Dependabot.
+
+Remote: https://github.com/Heavy-Chain-Engineering/mstc-chat (private).
 
 The feature's spec and architecture fix the exact layout inside these folders.
 
@@ -56,4 +59,4 @@ None yet. The first ones will come from the chat feature's architecture node.
 ## Setup status
 
 Declined: ETC agent rules in `AGENTS.md` (offered, not recommended)
-Paused: 13 CI and 14 dependency bot, until the project has a GitHub remote
+Paused:

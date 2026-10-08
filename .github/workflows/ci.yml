@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: |
+          uv sync --locked
+          npm --prefix frontend ci
+
+      - name: Commit hooks on all files
+        run: uv run --with pre-commit pre-commit run --all-files --show-diff-on-failure
+
+      - name: Tests with coverage
+        run: uv run pytest --cov --cov-report=xml -q
+
+      - name: Coverage of changed lines
+        if: github.event_name == 'pull_request'
+        run: uv run --with diff-cover diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80
+
+      - name: Dependency audit
+        run: |
+          uv run pip-audit
+          npm --prefix frontend audit --audit-level=high
