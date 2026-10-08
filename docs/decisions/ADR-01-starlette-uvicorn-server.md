@@ -2,7 +2,7 @@
 id = "ADR-01"
 name = "STARLETTE-UVICORN-SERVER"
 kind = "technology"
-status = "proposed"
+status = "accepted"
 decision = "The server is one Starlette app run by uvicorn in one process with one worker, so all room state lives on one asyncio event loop."
 use_when = "Adding or changing anything the Python server does over HTTP: routes, the event stream, static files, start-up."
 do_not_use_when = "Writing the room's rules, the session token or Markdown rendering, which stay free of the web framework."
@@ -33,6 +33,8 @@ different room, so participants would stop seeing each other's messages.
 ## Decision
 
 The server is one Starlette app run by uvicorn in one process with one worker.
+
+Ruled by the person on 2026-10-08: the person ratified this choice of technology.
 
 - Passing the app object to `uvicorn.run` makes a second worker impossible: uvicorn needs an
   import string to start workers, so the mistake fails at start-up instead of splitting the room.
@@ -65,4 +67,4 @@ Harder:
 | Standard library `http.server` with threads | Not meant for production, one thread per stream, routing and body parsing by hand. | A rule that the app must have no dependencies at all. |
 | FastAPI | Adds Pydantic and dependency injection the app does not need; it is Starlette underneath. | Many JSON endpoints with complex payloads. |
 | Flask with gevent, or Django | Synchronous by default; streaming many long requests needs extra workers or a different server. | None for this app. |
-| Hypercorn instead of uvicorn | Speaks HTTP/2 cleartext, which would pass client disconnects through Cloud Run, but it is less widely used; ADR-04 bounds disconnects without it. | The rehearsal shows the presence bound or the redeploy hand-over is too slow. |
+| Hypercorn instead of uvicorn | Speaks HTTP/2 cleartext, which would pass client disconnects through Cloud Run, but it is less widely used; ADR-04 bounds disconnects without it. | The rehearsal or the live redeploy shows the presence bound or the hand-over is too slow. |

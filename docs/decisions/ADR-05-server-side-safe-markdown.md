@@ -2,17 +2,18 @@
 id = "ADR-05"
 name = "SERVER-SIDE-SAFE-MARKDOWN"
 kind = "technology"
-status = "proposed"
-decision = "The server turns each message into HTML once, with markdown-it-py (raw HTML off, http and https links only, images as links, nesting at most 20) and then nh3 with an allowlist that matches the MessageBubble element list; the browser inserts that HTML only into a bubble and every other user string as text."
+status = "accepted"
+decision = "The server turns each message into HTML once, with markdown-it-py (raw HTML off, images as links, nesting at most 20) and then nh3, whose allowlist matches the MessageBubble element list and whose schemes are the one link rule; the browser inserts that HTML only into a bubble and every other user string as text."
 use_when = "Showing message text, or changing what Markdown a message may use."
 do_not_use_when = "Showing a display name, an error or any other user string, which the client inserts with textContent."
 use_instead = ["ADR-06"]
 applies_to = ["backend/safe_markdown.py", "frontend/src/chat.ts"]
 rules = [
   "Only backend/safe_markdown.py imports markdown_it, linkify_it or nh3, and app.py renders every message through to_safe_html before it enters the room.",
-  "The renderer runs the commonmark preset with html off, maxNesting 20, linkify on with fuzzy links and emails off, strikethrough on, and a link check that allows only absolute http and https addresses.",
-  "A render rule turns an image into a link to its address, with the alt text or the address as its text.",
-  "nh3 allows only p, br, strong, em, s, code, pre, a, ul, ol, li, blockquote, h1 to h6 and hr; only href on a; schemes http and https; no relative URLs; target=_blank and rel=noopener noreferrer on every link.",
+  "The renderer runs the commonmark preset with html off, maxNesting 20, linkify on with fuzzy links and emails off, and strikethrough on; it adds no link check of its own.",
+  "Images become plain links: md.disable(\"image\") only if a test shows that gives a plain link, otherwise a render rule that turns an image into a link to its address, with the alt text or the address as its text.",
+  "nh3 allows only p, br, strong, em, s, code, pre, a, ul, ol, li, blockquote, h1 to h6 and hr; only href on a; schemes http and https and no relative URLs, which together are the one link rule; target=_blank and rel=noopener noreferrer on every link.",
+  "app.py refuses a message whose rendered HTML is empty with 422 message_blank.",
   "A test renders hostile 4,000-character inputs (deep nesting, runs of *, [, > and backticks) and fails if one takes 500 ms or more.",
   "The client sets innerHTML only from a message's html field, and only on the bubble body; it inserts names and every other user string with textContent inside <bdi>.",
   "Adding an element to the allowlist needs a matching style in component-specs and a test for it.",
@@ -36,14 +37,19 @@ into `<img>` tags that load third-party addresses.
 The server turns each message into HTML once, with markdown-it-py and then nh3 under an
 allowlist; the browser inserts that HTML only into a bubble.
 
+Ruled by the person on 2026-10-08: the person ratified this choice of technology.
+
 - One module owning the libraries gives one place to read and test everything a message can
   become.
-- `html` off makes the renderer escape raw HTML, so it shows as text (AC-13). The link check
-  closes `javascript:`, `data:`, `mailto:` and relative links, which the default check partly
-  allows (`research/architect-codebase.md`). Fuzzy links are off so that only addresses written
-  with `http://` or `https://` become links (AC-14).
-- The image rule keeps a posted image from loading anything (AC-14). Disabling images instead
-  leaves a stray "!" and, for `![](url)`, an empty link. markdown-it-py writes strikethrough as
+- `html` off makes the renderer escape raw HTML, so it shows as text (AC-13). nh3's schemes
+  (http and https) and its refusal of relative URLs close `javascript:`, `data:`, `mailto:` and
+  relative links in one place; the probe showed the renderer alone lets relative links through
+  (`research/architect-codebase.md`). Fuzzy links are off so that only addresses written with
+  `http://` or `https://` become links (AC-14). The VP ruled this on 2026-10-08
+  (gray-areas-architect.md GA-042).
+- A posted image must never load anything (AC-14). The architect's probe showed that disabling
+  images leaves a stray "!" and, for `![](url)`, an empty link, so the render rule stays unless
+  the build's own test shows a plain link. markdown-it-py writes strikethrough as
   `<s>`, so the allowlist takes `s` and the stylesheet gives it the look component-specs sets for
   `<del>`.
 - Rendering runs on the server's one event loop, so the nesting cap and the timed test keep one
@@ -52,7 +58,8 @@ allowlist; the browser inserts that HTML only into a bubble.
   outside the list reaches a browser. Its list is the MessageBubble table, so the sanitizer and
   the design cannot drift.
 - Rendering once on the server means every open page and every replay get the same safe HTML,
-  and pytest proves it. The page's Content Security Policy is the third layer.
+  and pytest proves it. The page's Content Security Policy is the third layer. Refusing a message that renders to
+  nothing keeps empty bubbles out of the room.
 
 INV-003 names the same test file.
 

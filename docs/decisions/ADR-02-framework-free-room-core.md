@@ -2,7 +2,7 @@
 id = "ADR-02"
 name = "FRAMEWORK-FREE-ROOM-CORE"
 kind = "boundary"
-status = "proposed"
+status = "accepted"
 decision = "Only backend/app.py imports Starlette and only backend/__main__.py imports uvicorn; room.py, session.py and safe_markdown.py import no web framework."
 use_when = "Adding a room rule, a limit, a validation, presence logic, session logic or rendering logic."
 do_not_use_when = "Adding an HTTP route, a header, a middleware or anything that reads a request or writes a response."

@@ -2,9 +2,9 @@
 id = "ADR-07"
 name = "CLOUD-RUN-MAKE-DEPLOY"
 kind = "pattern"
-status = "proposed"
+status = "accepted"
 decision = "The app ships as one multi-stage, non-root container built from source by Cloud Build under a dedicated build account, and every Cloud Run operation is one Make target that sets all of its settings on the command line."
-use_when = "Changing how the app is built into an image, deployed, warmed up, cooled down, rolled back or rehearsed, or which Cloud Run settings it runs with."
+use_when = "Changing how the app is run locally (make dev, make build-client), built into an image, deployed, warmed up, cooled down, rolled back or rehearsed, or which Cloud Run settings it runs with."
 do_not_use_when = "Changing what CI checks, which lives in .github/workflows/ci.yml and never deploys."
 use_instead = ["ADR-06"]
 applies_to = ["Dockerfile", ".dockerignore", ".gcloudignore", "Makefile"]
@@ -13,8 +13,9 @@ rules = [
   "The runtime stage runs as a non-root user and starts python -m backend; base images are pinned to exact version tags.",
   "No secret is an ARG, an ENV or a build input; .dockerignore and .gcloudignore exclude .git, .env and .env.*.",
   "make setup creates the runtime account mstc-chat-runtime with Secret Accessor on the two secrets only, and the build account mstc-chat-build with only the roles Google lists for a source-deploy build account and never Editor.",
-  "make deploy sets the service maximum of 1 instance, concurrency 250, a 60-second timeout, 1 vCPU, 512 MiB, start-up CPU boost, unauthenticated access, the runtime account, the build account and both secrets as references pinned to version numbers it looks up at deploy time.",
-  "make deploy prints the service address, the commit, git status --short and the UTC time it finished.",
+  "make deploy sets the service maximum of 1 instance, concurrency 250, a 60-second timeout, 1 vCPU, 512 MiB, no start-up CPU boost, unauthenticated access, the runtime account, the build account and both secrets as references pinned to version numbers it looks up at deploy time.",
+  "make deploy prints the service address, the commit and git status --short.",
+  "make dev builds the client and runs the server locally with the settings in .env; make build-client builds the client only.",
   "make warm-up and make cool-down change only the service-level minimum, which creates no revision.",
   "Secret values enter through standard input or a silent prompt, never a command-line argument.",
 ]
@@ -39,6 +40,11 @@ unless the image names another user (research R17), and build arguments persist 
 The app ships as one multi-stage, non-root container built by Cloud Build under a dedicated
 build account, and each Cloud Run operation is one Make target that sets all of its settings.
 
+Ruled by the person on 2026-10-08: deployment is one manual command, and automated deploy is out
+of scope (gray-areas-spec.md GA-010). The VP ruled on the same day that the deploy sets no
+start-up CPU boost and that `make dev` and `make build-client` stay (gray-areas-architect.md
+GA-043).
+
 - Two stages keep Node, `node_modules` and the TypeScript sources out of the runtime image;
   `check=error=true` turns Docker's build checks, including the one for secrets in `ARG` and
   `ENV`, into failures.
@@ -47,8 +53,7 @@ build account, and each Cloud Run operation is one Make target that sets all of 
 - A non-root user limits what a bug in the server could do inside the container.
 - Every setting on the command line means a deploy cannot inherit a stale one, and the README can
   record the values from one place. Looking up the secret versions at deploy time pins them
-  without anyone copying a number. Unauthenticated access is how students reach the login page;
-  start-up CPU boost shortens a cold start at no extra charge.
+  without anyone copying a number. Unauthenticated access is how students reach the login page.
 - Printing the commit and the working tree's changes tells the lecturer what is live, since a
   source deploy uploads uncommitted files too.
 - The service-level minimum changes without a new revision, so warming up never empties the room.
@@ -62,7 +67,8 @@ so they rest on code review and the rehearsal (AC-20).
 
 Easier:
 
-- One command per operation, readable in the Makefile and in the lecture.
+- One command per operation, readable in the Makefile and in the lecture, including the local
+  run.
 - The same image runs locally (`docker build` and `docker run`) and on Cloud Run.
 
 Harder:

@@ -2,7 +2,7 @@
 id = "ADR-06"
 name = "VITE-TAILWIND-CLIENT"
 kind = "technology"
-status = "proposed"
+status = "accepted"
 decision = "The browser client is plain TypeScript with no UI framework, styled with Tailwind CSS 4 and daisyUI 5 in the mstc theme, built by Vite into frontend/dist, tested with Vitest, and served by the Python server from the same container."
 use_when = "Changing anything the browser runs or shows: markup, styles, fonts, client logic, client tests."
 do_not_use_when = "Rendering message Markdown, which the server does."
@@ -16,7 +16,7 @@ rules = [
   "Fonts come from the @fontsource packages and are served by the app; their licence texts sit in frontend/public/fonts/.",
   "The build writes only to frontend/dist/, which git ignores; the server serves index.html with Cache-Control: no-cache.",
   "No script loads from another origin.",
-  "The client writes no message text, name or draft to browser storage.",
+  "The client writes to browser storage only the reload record of ADR-04 (draft, restarted flag, instance id) in sessionStorage, and deletes it once restored.",
 ]
 example = "frontend/src/room.ts"
 enforced_by = "npm --prefix frontend run test, in CI and in the project's check commands"
@@ -36,6 +36,8 @@ from CSS at build time, so the client needs a build step. The spec asks for fron
 
 The client is plain TypeScript, styled with Tailwind 4 and daisyUI 5, built by Vite into
 `frontend/dist/`, tested with Vitest and served by the Python server.
+
+Ruled by the person on 2026-10-08: the person ratified this choice of technology.
 
 - Two screens do not need a component framework; markup in `index.html` and one module per
   screen read top to bottom.
