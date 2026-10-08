@@ -3,7 +3,14 @@ name = "mstc-chat"
 version = "0.1.0"
 description = "A live lecture chat room, and a spec-driven development demo."
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "starlette>=1.7,<2",
+    "uvicorn>=0.54,<1",
+    "itsdangerous>=2.2,<3",
+    "markdown-it-py>=4.2,<5",
+    "linkify-it-py>=2.2,<3",
+    "nh3>=0.3.7,<0.4",
+]
 
 [dependency-groups]
 dev = [
@@ -12,6 +19,7 @@ dev = [
     "mypy",
     "ruff",
     "pip-audit",
+    "httpx>=0.28,<1",
 ]
 
 [tool.ruff]
@@ -19,12 +27,19 @@ target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
-# E/F/W: errors, I: import order, B: bugbear, UP: modern syntax, S: security rules.
-select = ["E", "F", "W", "I", "B", "UP", "S"]
+# E/F/W: errors, I: import order, B: bugbear, UP: modern syntax, S: security rules,
+# TID251: banned imports (ADR-02).
+select = ["E", "F", "W", "I", "B", "UP", "S", "TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"starlette".msg = "Only backend/app.py may import Starlette (ADR-02)."
+"uvicorn".msg = "Only backend/__main__.py may import uvicorn (ADR-02)."
 
 [tool.ruff.lint.per-file-ignores]
 # Tests use plain assert.
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "TID251"]
+"backend/app.py" = ["TID251"]
+"backend/__main__.py" = ["TID251"]
 
 [tool.mypy]
 strict = true
