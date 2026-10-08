@@ -1,0 +1,33 @@
+# What `docker build` may not read. The Dockerfile copies only the client sources, backend/,
+# pyproject.toml and uv.lock, so everything else stays out, and secrets never reach a layer.
+
+# Secrets and history
+.env
+.env.*
+.git
+.github
+
+# Local installs and build output (each stage builds its own)
+**/node_modules
+frontend/dist
+.venv
+
+# Caches and test output
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Project records, tests and editor state the image does not need
+.etc_sdlc
+.claude
+tests
+docs
+*.md
+.DS_Store
+.idea
+.vscode

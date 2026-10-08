@@ -1,0 +1,34 @@
+# What `gcloud run deploy --source .` may not upload to Cloud Build. gcloud reads only this
+# file, not .gitignore, so it lists the secrets and local folders itself. The upload must keep
+# the Dockerfile and .dockerignore, which Cloud Build uses to build the image.
+
+# Secrets and history
+.env
+.env.*
+.git
+.github
+.gcloudignore
+
+# Local installs and build output (the image builds its own)
+**/node_modules
+frontend/dist
+.venv
+
+# Caches and test output
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Project records, tests and editor state the build does not need
+.etc_sdlc
+.claude
+tests
+docs
+.DS_Store
+.idea
+.vscode
