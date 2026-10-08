@@ -371,19 +371,15 @@ function setupComposer(doc: Document, deps: ChatDeps): Composer {
   };
 }
 
-export function setupChat(doc: Document, deps: ChatDeps): ChatView {
-  const screen = byId(doc, "chat-screen");
-  const list = byId(doc, "messages");
-  const loading = byId(doc, "messages-loading");
-  const empty = byId(doc, "messages-empty");
+// Returns the function that shows the restarted notice once per restart,
+// so a later render does not replace the alert the reader is reading.
+function setupRestartedNotice(
+  doc: Document,
+  deps: ChatDeps,
+): (restarted: boolean) => void {
   const notices = byId(doc, "notice-area");
-  const reconnecting = byId(doc, "reconnecting");
-  const composer = setupComposer(doc, deps);
-  const follower = setupFollower(doc, list);
-  let viewer = "";
   let restartedShown = false;
-
-  const renderRestarted = (restarted: boolean): void => {
+  return (restarted) => {
     if (restarted && !restartedShown) {
       showAlert(notices, "info", TEXT.restarted, () =>
         deps.onDismissRestarted(),
@@ -394,6 +390,18 @@ export function setupChat(doc: Document, deps: ChatDeps): ChatView {
     notices.hidden = !restarted;
     restartedShown = restarted;
   };
+}
+
+export function setupChat(doc: Document, deps: ChatDeps): ChatView {
+  const screen = byId(doc, "chat-screen");
+  const list = byId(doc, "messages");
+  const loading = byId(doc, "messages-loading");
+  const empty = byId(doc, "messages-empty");
+  const reconnecting = byId(doc, "reconnecting");
+  const composer = setupComposer(doc, deps);
+  const follower = setupFollower(doc, list);
+  const renderRestarted = setupRestartedNotice(doc, deps);
+  let viewer = "";
 
   return {
     show(viewerName, draft = "") {
