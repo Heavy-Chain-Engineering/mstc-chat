@@ -36,8 +36,8 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "TID251"]
 "uvicorn".msg = "Only backend/__main__.py may import uvicorn (ADR-02)."
 
 [tool.ruff.lint.per-file-ignores]
-# Tests use plain assert.
-"tests/**" = ["S101", "TID251"]
+# Tests use plain assert and throwaway secrets.
+"tests/**" = ["S101", "S105", "S106", "TID251"]
 "backend/app.py" = ["TID251"]
 "backend/__main__.py" = ["TID251"]
 
