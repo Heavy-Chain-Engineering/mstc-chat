@@ -185,3 +185,55 @@ async def test_should_give_each_participant_own_session_when_two_sign_in(
 
     assert (await first.get("/api/session")).json() == {"name": "Avery"}
     assert (await second.get("/api/session")).json() == {"name": "Jordan"}
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Avery‮", "Ave​ry", "Avery\n", "\tAvery", "Av\x00ery", "Avery\x7f"],
+)
+async def test_should_refuse_at_once_with_bad_request_when_name_holds_control_or_format_character(
+    make_app: AppFactory, name: str
+) -> None:
+    app = make_app(wrong_password_delay=1.0)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="https://testserver"
+    ) as client:
+        started = time.monotonic()
+
+        response = await client.post("/api/login", json={"name": name, "password": CLASS_PASSWORD})
+
+        elapsed = time.monotonic() - started
+    assert response.status_code == 400
+    assert response.json() == {"error": "bad_request"}
+    assert "set-cookie" not in response.headers
+    assert elapsed < 0.5
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"not json",
+        b'{"name": "Avery"}',
+        b'{"name": "Avery", "password": 5}',
+        b'{"name": "Avery", "password": "wrong\\ud800"}',
+        b'{"name": "Avery", "password": "\xff"}',
+    ],
+)
+async def test_should_refuse_at_once_with_bad_request_when_login_body_is_malformed(
+    make_app: AppFactory, body: bytes
+) -> None:
+    app = make_app(wrong_password_delay=1.0)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="https://testserver"
+    ) as client:
+        started = time.monotonic()
+
+        response = await client.post(
+            "/api/login", content=body, headers={"content-type": "application/json"}
+        )
+
+        elapsed = time.monotonic() - started
+    assert response.status_code == 400
+    assert response.json() == {"error": "bad_request"}
+    assert "set-cookie" not in response.headers
+    assert elapsed < 0.5
