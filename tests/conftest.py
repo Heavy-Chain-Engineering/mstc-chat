@@ -153,6 +153,7 @@ class OpenStream:
         async with asyncio.timeout(timeout):
             while (event := await self.next_event(timeout)) is not None:
                 events.append(event)
+            await self.task
         return events
 
     async def events_until(self, kind: str, timeout: float = 2.0) -> list[dict[str, str]]:
