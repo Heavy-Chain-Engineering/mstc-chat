@@ -174,6 +174,32 @@ describe("message box keys (AC-5)", () => {
 });
 
 describe("failed sends (AC-11)", () => {
+  it("should say there is nothing to send and never busy when the server answers message_blank", async () => {
+    start({ kind: "error", status: 422, code: "message_blank" });
+    type("\u200b");
+
+    sendButton().click();
+    await settle();
+
+    expect(sendAlertText()).toBe(
+      "Message not sent: there is nothing to send. Type a message, then press Send.",
+    );
+    expect(box().value).toBe("\u200b");
+  });
+
+  it("should say the request was not accepted and never busy when the server answers bad_request", async () => {
+    start({ kind: "error", status: 400, code: "bad_request" });
+    type("keep me");
+
+    sendButton().click();
+    await settle();
+
+    expect(sendAlertText()).toBe(
+      "Message not sent: the chat did not accept the request. Your text is kept; press Send to try again.",
+    );
+    expect(box().value).toBe("keep me");
+  });
+
   it("should say so and keep the text when the server cannot be reached", async () => {
     start({ kind: "unreachable" });
     type("keep me");

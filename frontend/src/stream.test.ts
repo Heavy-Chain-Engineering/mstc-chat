@@ -8,6 +8,7 @@ import {
   RELOAD_KEY,
   RoomStream,
   readReloadMemory,
+  waitForSession,
 } from "./stream";
 
 const TAB = "0b6f6c1e-8f3a-4a4e-9a51-1f6c2d3e4f50";
@@ -349,6 +350,73 @@ describe("RoomStream: new instance (redeploy or restart)", () => {
     expect(h.sources).toHaveLength(2);
     expect(h.reload).not.toHaveBeenCalled();
     expect(h.notices).not.toContain(true);
+  });
+});
+
+describe("readReloadMemory", () => {
+  it.each(["{not json", "null", "42"])(
+    "should ignore and remove the record when it is corrupt (%s)",
+    (raw) => {
+      const store = new MemoryStore();
+      store.setItem(RELOAD_KEY, raw);
+
+      const saved = readReloadMemory(store);
+
+      expect(saved).toEqual({
+        memory: { left: [], reloadedFor: null, restarted: false },
+        draft: "",
+      });
+      expect(store.getItem(RELOAD_KEY)).toBeNull();
+    },
+  );
+});
+
+describe("waitForSession (start-up)", () => {
+  function waiter(answers: ApiResult<NameAnswer>[]) {
+    const waits: number[] = [];
+    const onRetrying = vi.fn();
+    const result = waitForSession({
+      checkSession: () =>
+        Promise.resolve(answers.shift() ?? { kind: "unreachable" }),
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+      onRetrying,
+    });
+    return { result, waits, onRetrying };
+  }
+
+  it("should return the name at once when the session is good", async () => {
+    const { result, waits, onRetrying } = waiter([
+      { kind: "ok", data: { name: "Avery" } },
+    ]);
+
+    expect(await result).toEqual({ name: "Avery" });
+    expect(waits).toEqual([]);
+    expect(onRetrying).not.toHaveBeenCalled();
+  });
+
+  it("should report signed out without retrying when the server answers 401", async () => {
+    const { result, waits } = waiter([
+      { kind: "error", status: 401, code: "signed_out" },
+    ]);
+
+    expect(await result).toBeNull();
+    expect(waits).toEqual([]);
+  });
+
+  it("should show reconnecting and retry after 2, 4 and 10 seconds when the server is unreachable or answers 5xx", async () => {
+    const { result, waits, onRetrying } = waiter([
+      { kind: "unreachable" },
+      { kind: "error", status: 503, code: "server_error" },
+      { kind: "unreachable" },
+      { kind: "ok", data: { name: "Avery" } },
+    ]);
+
+    expect(await result).toEqual({ name: "Avery" });
+    expect(waits).toEqual([2000, 4000, 10_000]);
+    expect(onRetrying).toHaveBeenCalledTimes(1);
   });
 });
 

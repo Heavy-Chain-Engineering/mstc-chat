@@ -146,6 +146,11 @@ describe("joining", () => {
       "The chat server had a problem. Wait a few seconds and press Join again.",
     ],
     [
+      400,
+      "bad_request",
+      "The chat did not accept that request. Press Join to try again.",
+    ],
+    [
       413,
       "too_large",
       "That request was too large. Shorten your display name and try again.",
