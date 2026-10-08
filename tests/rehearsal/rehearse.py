@@ -20,6 +20,7 @@ import json
 import re
 import sys
 import time
+import urllib.parse
 import uuid
 from dataclasses import dataclass, field
 
@@ -30,6 +31,7 @@ DELIVERY_LIMIT_SECONDS = 2.0
 RECONNECT_DELAY_SECONDS = 1.0
 CONNECT_WAIT_SECONDS = 15.0
 PROBE = re.compile(r"rehearsal-probe-(\d+)")
+LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 
 
 @dataclass
@@ -50,9 +52,24 @@ class Probe:
     sent_at: float
 
 
+def checked_url(value: str) -> str:
+    """Accepts https, or plain http to this machine only: sign-in sends the class password."""
+    url = urllib.parse.urlsplit(value)
+    if url.scheme == "https" and url.hostname:
+        return value
+    if url.scheme == "http" and url.hostname in LOCAL_HOSTS:
+        return value
+    raise argparse.ArgumentTypeError(
+        f"{value!r} is not an https:// address; plain http is allowed only for localhost "
+        "or 127.0.0.1, because sign-in sends the class password"
+    )
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--url", required=True, help="the room's address, such as https://...")
+    parser.add_argument(
+        "--url", required=True, type=checked_url, help="the room's https:// address"
+    )
     parser.add_argument("--participants", type=int, default=50)
     parser.add_argument("--duration", type=float, default=60.0, help="seconds of posting")
     parser.add_argument("--interval", type=float, default=2.0, help="seconds between probes")
