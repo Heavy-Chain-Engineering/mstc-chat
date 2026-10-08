@@ -12,8 +12,8 @@ rules = [
   "The Dockerfile has a Node stage that runs npm ci --ignore-scripts and builds the client, and a Python stage that installs from uv.lock with uv sync --locked --no-dev --no-build and copies only frontend/dist, backend/, pyproject.toml and uv.lock; it starts with # check=error=true.",
   "The runtime stage runs as a non-root user and starts python -m backend; base images are pinned to exact version tags.",
   "No secret is an ARG, an ENV or a build input; .dockerignore and .gcloudignore exclude .git, .env and .env.*.",
-  "make setup creates the runtime account mstc-chat-runtime with Secret Accessor on the two secrets only, and the build account mstc-chat-build with only the roles Google lists for a source-deploy build account and never Editor.",
-  "make deploy sets the service maximum of 1 instance, concurrency 250, a 60-second timeout, 1 vCPU, 512 MiB, no start-up CPU boost, unauthenticated access, the runtime account, the build account and both secrets as references pinned to version numbers it looks up at deploy time.",
+  "The runtime account is mstc-chat-run@mstc-chat.iam.gserviceaccount.com, which the VP created, with Secret Accessor on the two secrets only; make setup creates the build account mstc-chat-build with only the roles Google lists for a source-deploy build account and never Editor.",
+  "make deploy sets the service maximum of 1 instance, concurrency 250, a 60-second timeout, 1 vCPU, 512 MiB, no start-up CPU boost, public access through --no-invoker-iam-check (never --allow-unauthenticated), the runtime account, the build account and both secrets as references pinned to version numbers it looks up at deploy time.",
   "make deploy prints the service address, the commit and git status --short.",
   "make dev builds the client and runs the server locally with the settings in .env; make build-client builds the client only.",
   "make warm-up and make cool-down change only the service-level minimum, which creates no revision.",
@@ -53,7 +53,9 @@ GA-043).
 - A non-root user limits what a bug in the server could do inside the container.
 - Every setting on the command line means a deploy cannot inherit a stale one, and the README can
   record the values from one place. Looking up the secret versions at deploy time pins them
-  without anyone copying a number. Unauthenticated access is how students reach the login page.
+  without anyone copying a number. Students reach the login page without a Google sign-in through
+  `--no-invoker-iam-check`; `--allow-unauthenticated` would add an `allUsers` binding, which the
+  heavychain.org organization policy (domain-restricted sharing) refuses.
 - Printing the commit and the working tree's changes tells the lecturer what is live, since a
   source deploy uploads uncommitted files too.
 - The service-level minimum changes without a new revision, so warming up never empties the room.
