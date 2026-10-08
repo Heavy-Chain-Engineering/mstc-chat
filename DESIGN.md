@@ -212,10 +212,18 @@ The full specs are in the feature bundle's `component-specs.md`. In short:
 
 ### Logo
 
-The person holds permission to use the McCombs mark for this class tool (the person's ruling of
-2026-10-08). The build therefore fills the logo slot above the login title with the official
-McCombs or MSTC logo. It downloads that file from the official source in the table below, and
-uses it unchanged.
+The person holds permission to use the McCombs mark for this class tool through their service on
+the MSTC Advisory Council (the VP's ruling of 2026-10-08). The logo slot above the login title
+therefore takes the official McCombs or MSTC logo, downloaded from the official source in the
+table below and used unchanged.
+
+Current state, 2026-10-08: the slot shows no logo. The build tried the formal McCombs logo at
+https://utexas.box.com/s/b88qfe69z1mhr4d441yj28k1gwo7c402, and that link answers with Box's
+web app page rather than a downloadable file, so no official file was obtained and the text
+wordmark below is shown. To add the logo, download the formal logo (RGB, full colour, SVG
+preferred) from that folder in a browser, commit it unchanged under `frontend/public/brand/`,
+and put it in the `#logo-slot` element of `frontend/index.html` with the alt text from
+component-specs.
 
 McCombs publishes its logos on UT's Box service [MC-D]. A McCombs or UT logo outside UT's own
 sites needs permission from UT's Office of Brand, Trademarks and Licensing [MC-CB], which the
