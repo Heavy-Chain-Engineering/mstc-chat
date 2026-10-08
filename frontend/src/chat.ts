@@ -175,8 +175,9 @@ function setupFollower(doc: Document, list: HTMLElement): Follower {
   const showUnseen = (count: number): void => {
     unseen = count;
     button.hidden = count === 0;
-    button.textContent = `${count} new messages ↓`;
-    button.setAttribute("aria-label", `${count} new messages, jump to latest`);
+    const noun = count === 1 ? "message" : "messages";
+    button.textContent = `${count} new ${noun} ↓`;
+    button.setAttribute("aria-label", `${count} new ${noun}, jump to latest`);
   };
   const jumpToLatest = (): void => {
     list.scrollTop = list.scrollHeight;
