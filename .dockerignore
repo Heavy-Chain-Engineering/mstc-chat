@@ -4,6 +4,8 @@
 # Secrets and history
 .env
 .env.*
+**/.env
+**/.env.*
 .git
 .github
 
