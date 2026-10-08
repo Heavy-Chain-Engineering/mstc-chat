@@ -165,9 +165,9 @@ async def test_should_refuse_with_cross_site_when_post_comes_from_another_site(
     assert response.json() == {"error": "cross_site"}
 
 
-@pytest.mark.parametrize("site", ["same-origin", "same-site", "none"])
-async def test_should_accept_post_when_fetch_site_is_not_cross_site(
-    client: httpx.AsyncClient, site: str
+@pytest.mark.parametrize("site", ["same-site", "none", "cross-site", "anything-else"])
+async def test_should_refuse_post_when_fetch_site_is_present_and_not_same_origin(
+    client: httpx.AsyncClient, app: Starlette, site: str
 ) -> None:
     await sign_in(client, "Avery")
 
@@ -175,7 +175,62 @@ async def test_should_accept_post_when_fetch_site_is_not_cross_site(
         "/api/messages", json={"text": "hello"}, headers={"sec-fetch-site": site}
     )
 
+    assert response.status_code == 403
+    assert response.json() == {"error": "cross_site"}
+    assert room_of(app).connect(TAB_A, "Probe", "sid-probe", None).replay == []
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"sec-fetch-site": "same-origin"},
+        {"sec-fetch-site": "same-origin", "origin": "https://evil.example"},
+        {"origin": "https://testserver"},
+        {},
+    ],
+)
+async def test_should_accept_post_when_request_is_same_origin_or_carries_neither_header(
+    client: httpx.AsyncClient, headers: dict[str, str]
+) -> None:
+    await sign_in(client, "Avery")
+
+    response = await client.post("/api/messages", json={"text": "hello"}, headers=headers)
+
     assert response.status_code == 204
+
+
+@pytest.mark.parametrize(
+    "origin", ["https://evil.example", "https://testserver.evil.example", "null"]
+)
+async def test_should_refuse_post_when_fetch_site_is_absent_and_origin_differs_from_host(
+    client: httpx.AsyncClient, app: Starlette, origin: str
+) -> None:
+    await sign_in(client, "Avery")
+
+    response = await client.post(
+        "/api/messages", json={"text": "hello"}, headers={"origin": origin}
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"error": "cross_site"}
+    assert room_of(app).connect(TAB_A, "Probe", "sid-probe", None).replay == []
+
+
+async def test_should_pass_lifespan_events_through_when_server_starts_and_stops(
+    app: Starlette,
+) -> None:
+    incoming = iter([{"type": "lifespan.startup"}, {"type": "lifespan.shutdown"}])
+    sent: list[str] = []
+
+    async def receive() -> dict[str, str]:
+        return next(incoming)
+
+    async def send(message: dict[str, str]) -> None:
+        sent.append(message["type"])
+
+    await app({"type": "lifespan", "asgi": {"version": "3.0"}}, receive, send)
+
+    assert sent == ["lifespan.startup.complete", "lifespan.shutdown.complete"]
 
 
 async def test_should_change_nothing_when_message_body_is_over_32_kb_ac3(

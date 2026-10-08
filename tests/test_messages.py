@@ -46,7 +46,7 @@ async def test_should_refuse_with_message_too_long_when_message_has_4001_code_po
 
 
 @pytest.mark.parametrize(
-    ("text", "code"), [("  \n ", "message_blank"), ("[x]: https://a.b", "empty_message")]
+    ("text", "code"), [("  \n ", "message_blank"), ("[x]: https://a.b", "message_blank")]
 )
 async def test_should_refuse_when_message_is_blank_or_renders_empty(
     client: httpx.AsyncClient, app: Starlette, text: str, code: str

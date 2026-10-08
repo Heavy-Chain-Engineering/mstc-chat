@@ -259,3 +259,21 @@ async def test_should_write_each_event_as_one_ascii_line_when_text_has_newlines_
     assert set(message) == {"event", "id", "data"}
     assert message["data"].isascii()
     assert data_of(message)["author"] == "Zoë"
+
+
+async def test_should_end_stream_when_its_queue_of_the_set_size_is_full(
+    make_app: AppFactory,
+) -> None:
+    app = make_app(queue_size=2)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="https://testserver"
+    ) as client:
+        cookie = await sign_in(client, "Avery")
+        stream = await open_stream(app, cookie)
+        await stream.events_until("presence")
+        room = room_of(app)
+
+        _ = [room.post("Jordan", "sid-j", f"<p>{n}</p>") for n in range(3)]
+        delivered = await stream.events_until_end(timeout=1.0)
+
+    assert [data_of(event)["seq"] for event in delivered] == [1]
