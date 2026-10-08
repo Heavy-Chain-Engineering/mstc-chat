@@ -22,7 +22,7 @@ then show the spec and re-run a deploy live in class.
 - `DOMAIN.md`, `PROJECT.md`: the project's context.
 - `.github/`: CI (`ci.yml`) and Dependabot.
 
-Remote: https://github.com/Heavy-Chain-Engineering/mstc-chat (private).
+Remote: https://github.com/Heavy-Chain-Engineering/mstc-chat (public).
 
 The feature's spec and architecture fix the exact layout inside these folders.
 
