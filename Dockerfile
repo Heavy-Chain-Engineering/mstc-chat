@@ -17,7 +17,7 @@ RUN npm run build
 
 FROM ghcr.io/astral-sh/uv:0.12.4 AS uv
 
-FROM python:3.14.8-slim AS deps
+FROM python:3.15.0-slim AS deps
 COPY --from=uv /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -28,7 +28,7 @@ COPY pyproject.toml uv.lock ./
 # --no-build accepts prebuilt wheels only, so no package's build script runs here.
 RUN uv sync --locked --no-dev --no-build --no-install-project
 
-FROM python:3.14.8-slim AS runtime
+FROM python:3.15.0-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
